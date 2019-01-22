@@ -1,0 +1,13 @@
+D:\skripsi dika\AplikasiPembandingHarga\AplikasiPembandingHarga\bin\Debug\AplikasiPembandingHarga.exe.config
+D:\Projek\skripsi dika\AplikasiPembandingHarga\AplikasiPembandingHarga\bin\Debug\AplikasiPembandingHarga.exe.config
+D:\Projek\skripsi dika\AplikasiPembandingHarga\AplikasiPembandingHarga\bin\Debug\AplikasiPembandingHarga.exe
+D:\Projek\skripsi dika\AplikasiPembandingHarga\AplikasiPembandingHarga\bin\Debug\AplikasiPembandingHarga.pdb
+D:\Projek\skripsi dika\AplikasiPembandingHarga\AplikasiPembandingHarga\obj\Debug\AplikasiPembandingHarga.Form1.resources
+D:\Projek\skripsi dika\AplikasiPembandingHarga\AplikasiPembandingHarga\obj\Debug\AplikasiPembandingHarga.Form2.resources
+D:\Projek\skripsi dika\AplikasiPembandingHarga\AplikasiPembandingHarga\obj\Debug\AplikasiPembandingHarga.Form3.resources
+D:\Projek\skripsi dika\AplikasiPembandingHarga\AplikasiPembandingHarga\obj\Debug\AplikasiPembandingHarga.Properties.Resources.resources
+D:\Projek\skripsi dika\AplikasiPembandingHarga\AplikasiPembandingHarga\obj\Debug\AplikasiPembandingHarga.csproj.GenerateResource.Cache
+D:\Projek\skripsi dika\AplikasiPembandingHarga\AplikasiPembandingHarga\obj\Debug\AplikasiPembandingHarga.exe
+D:\Projek\skripsi dika\AplikasiPembandingHarga\AplikasiPembandingHarga\obj\Debug\AplikasiPembandingHarga.pdb
+D:\Projek\skripsi dika\AplikasiPembandingHarga\AplikasiPembandingHarga\obj\Debug\AplikasiPembandingHarga.csprojResolveAssemblyReference.cache
+D:\Projek\skripsi dika\AplikasiPembandingHarga\AplikasiPembandingHarga\obj\Debug\AplikasiPembandingHarga.Form4.resources

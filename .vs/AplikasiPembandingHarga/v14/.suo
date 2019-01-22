@@ -1,0 +1,567 @@
+ï»¿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using ExcelDataReader;
+using System.Data.OleDb;
+using System.IO;
+
+
+
+namespace Skripsi_Puthut
+{
+    public partial class Form1 : Form
+    {
+        private string AccessFile = Path.Combine(
+             AppDomain.CurrentDomain.BaseDirectory, "textMinning.accdb.accdb");
+
+        private string ExcelFile = Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory, "test.xlsx");
+        public Form1()
+        {
+            InitializeComponent();
+        }
+        OleDbConnection con = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source=|DataDirectory|\textMinning.accdb");
+
+        int i = 1,jumlahList=0, jumlahComment=0;
+        
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            LoadDimensi();
+        }
+
+       List<String> listkeyword; 
+        private void LoadList()
+        {
+            string strSql = "Select kata_kunci from tbl_kata_kunci where id_dimensi="+i+"";
+            OleDbDataAdapter adapter = new OleDbDataAdapter(new OleDbCommand(strSql, con));
+            DataSet ds = new DataSet();
+            adapter.Fill(ds);
+            foreach (DataRow dr in ds.Tables[0].Rows)
+            {
+                listkeyword = ds.Tables[0].AsEnumerable().Select(r => r.Field<String>(0)).ToList();
+            }
+            con.Close();
+            jumlahList = listkeyword.Count();
+        }
+
+        private void btnCari_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog opf = new OpenFileDialog();
+            int tempDimensi = 0;
+            opf.Filter = "Excel Files|*.xlsx;*.xls*;*.xlsm";
+            if (opf.ShowDialog() == DialogResult.OK)
+            {
+                try
+                {
+                    opf.OpenFile();
+                    lblpath.Text = opf.FileName;
+                    LoadList();
+                    DataSet ds = new DataSet();
+                    MessageBox.Show(jumlahList.ToString());
+                    for (int j = 0; j < jumlahList; j++)
+                    {
+                            string strSql = "Select count(komentar) from tbl_kata_kunci";
+                            OleDbDataAdapter adapter = new OleDbDataAdapter(new OleDbCommand(strSql, con));
+                            adapter.Fill(ds);
+                            tempDimensi = tempDimensi + int.Parse(ds.Tables[0].Rows[0][0].ToString());
+                        i++;
+                        MessageBox.Show(tempDimensi.ToString());
+                    }
+                    con.Close();
+
+                    /*System.Data.DataTable dt = null;
+                      string ConnString = @"Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" + lblpath.Text + "; Extended Properties=Excel 8.0;";
+                      OleDbConnection conn = new OleDbConnection(ConnString);
+                      conn.Open();
+                      dt = conn.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, null);
+                      String[] excelsheets = new String[dt.Rows.Count];
+                      int i = 0;
+
+                      foreach (DataRow dr in dt.Rows)
+                      {
+                          excelsheets[i] = dr["tbl_komentar"].ToString();
+                          i++;
+                      }
+
+                      DataSet ds = new DataSet();
+                      foreach (string temp in excelsheets)
+                      {
+                          string query = "select * from [" + temp + "]";
+                          OleDbDataAdapter adp = new OleDbDataAdapter(query, conn);
+                      }
+                      conn.Close();*/
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.ToString());
+                }
+            }
+        }
+
+        private void LoadDimensi()
+        {
+            try {
+                  
+                    string strSql = "Select dimensi from tbl_dimensi";
+                    OleDbDataAdapter adapter = new OleDbDataAdapter(new OleDbCommand(strSql, con));
+                    DataSet ds = new DataSet();
+                    adapter.Fill(ds);
+                    cmbDimensi.DataSource = ds.Tables[0];
+                    cmbDimensi.DisplayMember = "Pilih Dimensi";
+                    cmbDimensi.ValueMember = "dimensi";
+                    con.Close();
+            } catch (Exception x) {
+                MessageBox.Show(x.ToString());
+                con.Close();
+            }
+        }
+
+        private void showKataKunci(int selectedIndex)
+        {
+            try
+            {
+                selectedIndex = selectedIndex + 1;
+                string strSql = "Select id_kata_kunci, kata_kunci from tbl_kata_kunci where id_dimensi="+ selectedIndex + "";
+                OleDbDataAdapter adapter = new OleDbDataAdapter(new OleDbCommand(strSql, con));
+                DataSet ds = new DataSet();
+                adapter.Fill(ds);
+                dataGridView1.DataSource = ds.Tables[0];
+                dataGridView1.Columns[0].Visible = false;
+                dataGridView1.Show();
+                con.Close();
+            }
+            catch (Exception x)
+            {
+                MessageBox.Show(x.ToString());
+                con.Close();
+            }
+        }
+
+        private void cmbDimensi_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            try
+            {
+            
+                showKataKunci(cmbDimensi.SelectedIndex);
+
+            } catch (Exception x)
+            {
+                MessageBox.Show(x.ToString());
+                con.Close();
+            }
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            if(button1.Text=="Add")
+            {
+                button1.Text = "Simpan";
+                cmbDimensi.Enabled = false;
+                textBox1.Enabled = true;
+
+            }
+            else
+            {
+
+            }
+
+        }
+
+        private void tabPage2_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+            dataGridView1_KeyUp(sender, null);
+        }
+
+        private void dataGridView1_KeyUp(object sender, KeyEventArgs e)
+        {
+            lbl_id_kata_kunci.Text = getKolom(dataGridView1, 0);
+            textBox1.Text = getKolom(dataGridView1, 1);
+        }
+
+        private string getKolom(DataGridView dg, int i)
+        {
+            try
+            {
+                return dg[dg.Columns[i].Index, dg.CurrentRow.Index].Value.ToString();
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                string strSql = "delete dimensi from tbl_dimensi";
+                OleDbDataAdapter adapter = new OleDbDataAdapter(new OleDbCommand(strSql, con));
+                DataSet ds = new DataSet();
+                adapter.Fill(ds);
+                cmbDimensi.DataSource = ds.Tables[0];
+                cmbDimensi.DisplayMember = "Pilih Dimensi";
+                cmbDimensi.ValueMember = "dimensi";
+                con.Close();
+            }
+            catch (Exception x)
+            {
+                MessageBox.Show(x.ToString());
+                con.Close();
+            }
+        }
+
+        private void btnClear_Click(object sender, EventArgs e)
+        {
+            button1.Text = "Add";
+            cmbDimensi.Enabled = true;
+            cmbDimensi.SelectedIndex = 0;
+            textBox1.Enabled = false;
+            textBox1.Text = "";
+            lbl_id_kata_kunci.Text = "0";
+        }
+    }
+}
+
+#region katakunci
+public class katakunci {
+    String kata_kunci;
+
+    public string Kata_kunci
+    {
+        get
+        {
+            return kata_kunci;
+        }
+
+        set
+        {
+            kata_kunci = value;
+        }
+    }
+}
+#endregion                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     ï»¿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema id="textMinningDataSet" targetNamespace="http://tempuri.org/textMinningDataSet.xsd" xmlns:mstns="http://tempuri.org/textMinningDataSet.xsd" xmlns="http://tempuri.org/textMinningDataSet.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" xmlns:msprop="urn:schemas-microsoft-com:xml-msprop" attributeFormDefault="qualified" elementFormDefault="qualified">
+  <xs:annotation>
+    <xs:appinfo source="urn:schemas-microsoft-com:xml-msdatasource">
+      <DataSource DefaultConnectionIndex="0" FunctionsComponentName="QueriesTableAdapter" Modifier="AutoLayout, AnsiClass, Class, Public" SchemaSerializationMode="IncludeSchema" xmlns="urn:schemas-microsoft-com:xml-msdatasource">
+        <Connections>
+          <Connection AppSettingsObjectName="Settings" AppSettingsPropertyName="textMinningConnectionString" ConnectionStringObject="" IsAppSettingsProperty="true" Modifier="Assembly" Name="textMinningConnectionString (Settings)" PropertyReference="ApplicationSettings.Skripsi_Puthut.Properties.Settings.GlobalReference.Default.textMinningConnectionString" Provider="System.Data.OleDb" />
+        </Connections>
+        <Tables>
+          <TableAdapter BaseClass="System.ComponentModel.Component" DataAccessorModifier="AutoLayout, AnsiClass, Class, Public" DataAccessorName="tbl_dimensiTableAdapter" GeneratorDataComponentClassName="tbl_dimensiTableAdapter" Name="tbl_dimensi" UserDataComponentName="tbl_dimensiTableAdapter">
+            <MainSource>
+              <DbSource ConnectionRef="textMinningConnectionString (Settings)" DbObjectName="tbl_dimensi" DbObjectType="Table" FillMethodModifier="Public" FillMethodName="Fill" GenerateMethods="Both" GenerateShortCommands="true" GeneratorGetMethodName="GetData" GeneratorSourceName="Fill" GetMethodModifier="Public" GetMethodName="GetData" QueryType="Rowset" ScalarCallRetval="System.Object, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" UseOptimisticConcurrency="true" UserGetMethodName="GetData" UserSourceName="Fill">
+                <DeleteCommand>
+                  <DbCommand CommandType="Text" ModifiedByUser="false">
+                    <CommandText>DELETE FROM `tbl_dimensi` WHERE ((`ID` = ?) AND ((? = 1 AND `dimensi` IS NULL) OR (`dimensi` = ?)))</CommandText>
+                    <Parameters>
+                      <Parameter AllowDbNull="false" AutogeneratedName="" DataSourceName="" DbType="Int32" Direction="Input" ParameterName="Original_ID" Precision="0" ProviderType="Integer" Scale="0" Size="0" SourceColumn="ID" SourceColumnNullMapping="false" SourceVersion="Original" />
+                      <Parameter AllowDbNull="true" AutogeneratedName="" DataSourceName="" DbType="Int32" Direction="Input" ParameterName="IsNull_dimensi" Precision="0" ProviderType="Integer" Scale="0" Size="0" SourceColumn="dimensi" SourceColumnNullMapping="true" SourceVersion="Original" />
+                      <Parameter AllowDbNull="true" AutogeneratedName="" DataSourceName="" DbType="String" Direction="Input" ParameterName="Original_dimensi" Precision="0" ProviderType="VarWChar" Scale="0" Size="0" SourceColumn="dimensi" SourceColumnNullMapping="false" SourceVersion="Original" />
+                    </Parameters>
+                  </DbCommand>
+                </DeleteCommand>
+                <InsertCommand>
+                  <DbCommand CommandType="Text" ModifiedByUser="false">
+                    <CommandText>INSERT INTO `tbl_dimensi` (`dimensi`) VALUES (?)</CommandText>
+                    <Parameters>
+                      <Parameter AllowDbNull="true" AutogeneratedName="" DataSourceName="" DbType="String" Direction="Input" ParameterName="dimensi" Precision="0" ProviderType="VarWChar" Scale="0" Size="0" SourceColumn="dimensi" SourceColumnNullMapping="false" SourceVersion="Current" />
+                    </Parameters>
+                  </DbCommand>
+                </InsertCommand>
+                <SelectCommand>
+                  <DbCommand CommandType="Text" ModifiedByUser="false">
+                    <CommandText>SELECT ID, dimensi FROM tbl_dimensi</CommandText>
+                    <Parameters />
+                  </DbCommand>
+                </SelectCommand>
+                <UpdateCommand>
+                  <DbCommand CommandType="Text" ModifiedByUser="false">
+                    <CommandText>UPDATE `tbl_dimensi` SET `dimensi` = ? WHERE ((`ID` = ?) AND ((? = 1 AND `dimensi` IS NULL) OR (`dimensi` = ?)))</CommandText>
+                    <Parameters>
+                      <Parameter AllowDbNull="true" AutogeneratedName="" DataSourceName="" DbType="String" Direction="Input" ParameterName="dimensi" Precision="0" ProviderType="VarWChar" Scale="0" Size="0" SourceColumn="dimensi" SourceColumnNullMapping="false" SourceVersion="Current" />
+                      <Parameter AllowDbNull="false" AutogeneratedName="" DataSourceName="" DbType="Int32" Direction="Input" ParameterName="Original_ID" Precision="0" ProviderType="Integer" Scale="0" Size="0" SourceColumn="ID" SourceColumnNullMapping="false" SourceVersion="Original" />
+                      <Parameter AllowDbNull="true" AutogeneratedName="" DataSourceName="" DbType="Int32" Direction="Input" ParameterName="IsNull_dimensi" Precision="0" ProviderType="Integer" Scale="0" Size="0" SourceColumn="dimensi" SourceColumnNullMapping="true" SourceVersion="Original" />
+                      <Parameter AllowDbNull="true" AutogeneratedName="" DataSourceName="" DbType="String" Direction="Input" ParameterName="Original_dimensi" Precision="0" ProviderType="VarWChar" Scale="0" Size="0" SourceColumn="dimensi" SourceColumnNullMapping="false" SourceVersion="Original" />
+                    </Parameters>
+                  </DbCommand>
+                </UpdateCommand>
+              </DbSource>
+            </MainSource>
+            <Mappings>
+              <Mapping SourceColumn="ID" DataSetColumn="ID" />
+              <Mapping SourceColumn="dimensi" DataSetColumn="dimensi" />
+            </Mappings>
+            <Sources />
+          </TableAdapter>
+          <TableAdapter BaseClass="System.ComponentModel.Component" DataAccessorModifier="AutoLayout, AnsiClass, Class, Public" DataAccessorName="tbl_kata_kunciTableAdapter" GeneratorDataComponentClassName="tbl_kata_kunciTableAdapter" Name="tbl_kata_kunci" UserDataComponentName="tbl_kata_kunciTableAdapter">
+            <MainSource>
+              <DbSource ConnectionRef="textMinningConnectionString (Settings)" DbObjectName="tbl_kata_kunci" DbObjectType="Table" FillMethodModifier="Public" FillMethodName="Fill" GenerateMethods="Both" GenerateShortCommands="true" GeneratorGetMethodName="GetData" GeneratorSourceName="Fill" GetMethodModifier="Public" GetMethodName="GetData" QueryType="Rowset" ScalarCallRetval="System.Object, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" UseOptimisticConcurrency="true" UserGetMethodName="GetData" UserSourceName="Fill">
+                <DeleteCommand>
+                  <DbCommand CommandType="Text" ModifiedByUser="false">
+                    <CommandText>DELETE FROM `tbl_kata_kunci` WHERE ((`id_kata_kunci` = ?) AND ((? = 1 AND `kata_kunci` IS NULL) OR (`kata_kunci` = ?)) AND ((? = 1 AND `id_dimensi` IS NULL) OR (`id_dimensi` = ?)))</CommandText>
+                    <Parameters>
+                      <Parameter AllowDbNull="false" AutogeneratedName="" DataSourceName="" DbType="Int32" Direction="Input" ParameterName="Original_id_kata_kunci" Precision="0" ProviderType="Integer" Scale="0" Size="0" SourceColumn="id_kata_kunci" SourceColumnNullMapping="false" SourceVersion="Original" />
+                      <Parameter AllowDbNull="true" AutogeneratedName="" DataSourceName="" DbType="Int32" Direction="Input" ParameterName="IsNull_kata_kunci" Precision="0" ProviderType="Integer" Scale="0" Size="0" SourceColumn="kata_kunci" SourceColumnNullMapping="true" SourceVersion="Original" />
+                      <Parameter AllowDbNull="true" AutogeneratedName="" DataSourceName="" DbType="String" Direction="Input" ParameterName="Original_kata_kunci" Precision="0" ProviderType="VarWChar" Scale="0" Size="0" SourceColumn="kata_kunci" SourceColumnNullMapping="false" SourceVersion="Original" />
+                      <Parameter AllowDbNull="true" AutogeneratedName="" DataSourceName="" DbType="Int32" Direction="Input" ParameterName="IsNull_id_dimensi" Precision="0" ProviderType="Integer" Scale="0" Size="0" SourceColumn="id_dimensi" SourceColumnNullMapping="true" SourceVersion="Original" />
+                      <Parameter AllowDbNull="true" AutogeneratedName="" DataSourceName="" DbType="Int32" Direction="Input" ParameterName="Original_id_dimensi" Precision="0" ProviderType="Integer" Scale="0" Size="0" SourceColumn="id_dimensi" SourceColumnNullMapping="false" SourceVersion="Original" />
+                    </Parameters>
+                  </DbCommand>
+                </DeleteCommand>
+                <InsertCommand>
+                  <DbCommand CommandType="Text" ModifiedByUser="false">
+                    <CommandText>INSERT INTO `tbl_kata_kunci` (`kata_kunci`, `id_dimensi`) VALUES (?, ?)</CommandText>
+                    <Parameters>
+                      <Parameter AllowDbNull="true" AutogeneratedName="" DataSourceName="" DbType="String" Direction="Input" ParameterName="kata_kunci" Precision="0" ProviderType="VarWChar" Scale="0" Size="0" SourceColumn="kata_kunci" SourceColumnNullMapping="false" SourceVersion="Current" />
+                      <Parameter AllowDbNull="true" AutogeneratedName="" DataSourceName="" DbType="Int32" Direction="Input" ParameterName="id_dimensi" Precision="0" ProviderType="Integer" Scale="0" Size="0" SourceColumn="id_dimensi" SourceColumnNullMapping="false" SourceVersion="Current" />
+                    </Parameters>
+                  </DbCommand>
+                </InsertCommand>
+                <SelectCommand>
+                  <DbCommand CommandType="Text" ModifiedByUser="false">
+                    <CommandText>SELECT id_kata_kunci, kata_kunci, id_dimensi FROM tbl_kata_kunci</CommandText>
+                    <Parameters />
+                  </DbCommand>
+                </SelectCommand>
+                <UpdateCommand>
+                  <DbCommand CommandType="Text" ModifiedByUser="false">
+                    <CommandText>UPDATE `tbl_kata_kunci` SET `kata_kunci` = ?, `id_dimensi` = ? WHERE ((`id_kata_kunci` = ?) AND ((? = 1 AND `kata_kunci` IS NULL) OR (`kata_kunci` = ?)) AND ((? = 1 AND `id_dimensi` IS NULL) OR (`id_dimensi` = ?)))</CommandText>
+                    <Parameters>
+                      <Parameter AllowDbNull="true" AutogeneratedName="" DataSourceName="" DbType="String" Direction="Input" ParameterName="kata_kunci" Precision="0" ProviderType="VarWChar" Scale="0" Size="0" SourceColumn="kata_kunci" SourceColumnNullMapping="false" SourceVersion="Current" />
+                      <Parameter AllowDbNull="true" AutogeneratedName="" DataSourceName="" DbType="Int32" Direction="Input" ParameterName="id_dimensi" Precision="0" ProviderType="Integer" Scale="0" Size="0" SourceColumn="id_dimensi" SourceColumnNullMapping="false" SourceVersion="Current" />
+                      <Parameter AllowDbNull="false" AutogeneratedName="" DataSourceName="" DbType="Int32" Direction="Input" ParameterName="Original_id_kata_kunci" Precision="0" ProviderType="Integer" Scale="0" Size="0" SourceColumn="id_kata_kunci" SourceColumnNullMapping="false" SourceVersion="Original" />
+                      <Parameter AllowDbNull="true" AutogeneratedName="" DataSourceName="" DbType="Int32" Direction="Input" ParameterName="IsNull_kata_kunci" Precision="0" ProviderType="Integer" Scale="0" Size="0" SourceColumn="kata_kunci" SourceColumnNullMapping="true" SourceVersion="Original" />
+                      <Parameter AllowDbNull="true" AutogeneratedName="" DataSourceName="" DbType="String" Direction="Input" ParameterName="Original_kata_kunci" Precision="0" ProviderType="VarWChar" Scale="0" Size="0" SourceColumn="kata_kunci" SourceColumnNullMapping="false" SourceVersion="Original" />
+                      <Parameter AllowDbNull="true" AutogeneratedName="" DataSourceName="" DbType="Int32" Direction="Input" ParameterName="IsNull_id_dimensi" Precision="0" ProviderType="Integer" Scale="0" Size="0" SourceColumn="id_dimensi" SourceColumnNullMapping="true" SourceVersion="Original" />
+                      <Parameter AllowDbNull="true" AutogeneratedName="" DataSourceName="" DbType="Int32" Direction="Input" ParameterName="Original_id_dimensi" Precision="0" ProviderType="Integer" Scale="0" Size="0" SourceColumn="id_dimensi" SourceColumnNullMapping="false" SourceVersion="Original" />
+                    </Parameters>
+                  </DbCommand>
+                </UpdateCommand>
+              </DbSource>
+            </MainSource>
+            <Mappings>
+              <Mapping SourceColumn="id_kata_kunci" DataSetColumn="id_kata_kunci" />
+              <Mapping SourceColumn="kata_kunci" DataSetColumn="kata_kunci" />
+              <Mapping SourceColumn="id_dimensi" DataSetColumn="id_dimensi" />
+            </Mappings>
+            <Sources />
+          </TableAdapter>
+          <TableAdapter BaseClass="System.ComponentModel.Component" DataAccessorModifier="AutoLayout, AnsiClass, Class, Public" DataAccessorName="tbl_komentarTableAdapter" GeneratorDataComponentClassName="tbl_komentarTableAdapter" Name="tbl_komentar" UserDataComponentName="tbl_komentarTableAdapter">
+            <MainSource>
+              <DbSource ConnectionRef="textMinningConnectionString (Settings)" DbObjectName="tbl_komentar" DbObjectType="Table" FillMethodModifier="Public" FillMethodName="Fill" GenerateMethods="Both" GenerateShortCommands="true" GeneratorGetMethodName="GetData" GeneratorSourceName="Fill" GetMethodModifier="Public" GetMethodName="GetData" QueryType="Rowset" ScalarCallRetval="System.Object, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" UseOptimisticConcurrency="true" UserGetMethodName="GetData" UserSourceName="Fill">
+                <InsertCommand>
+                  <DbCommand CommandType="Text" ModifiedByUser="false">
+                    <CommandText>INSERT INTO `tbl_komentar` (`komentar`) VALUES (?)</CommandText>
+                    <Parameters>
+                      <Parameter AllowDbNull="true" AutogeneratedName="" DataSourceName="" DbType="String" Direction="Input" ParameterName="komentar" Precision="0" ProviderType="VarWChar" Scale="0" Size="0" SourceColumn="komentar" SourceColumnNullMapping="false" SourceVersion="Current" />
+                    </Parameters>
+                  </DbCommand>
+                </InsertCommand>
+                <SelectCommand>
+                  <DbCommand CommandType="Text" ModifiedByUser="false">
+                    <CommandText>SELECT komentar FROM tbl_komentar</CommandText>
+                    <Parameters />
+                  </DbCommand>
+                </SelectCommand>
+              </DbSource>
+            </MainSource>
+            <Mappings>
+              <Mapping SourceColumn="komentar" DataSetColumn="komentar" />
+            </Mappings>
+            <Sources />
+          </TableAdapter>
+        </Tables>
+        <Sources />
+      </DataSource>
+    </xs:appinfo>
+  </xs:annotation>
+  <xs:element name="textMinningDataSet" msdata:IsDataSet="true" msdata:UseCurrentLocale="true" msprop:EnableTableAdapterManager="True" msprop:Generator_DataSetName="textMinningDataSet" msprop:Generator_UserDSName="textMinningDataSet">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="tbl_dimensi" msprop:Generator_TableClassName="tbl_dimensiDataTable" msprop:Generator_TableVarName="tabletbl_dimensi" msprop:Generator_RowChangedName="tbl_dimensiRowChanged" msprop:Generator_TablePropName="tbl_dimensi" msprop:Generator_RowDeletingName="tbl_dimensiRowDeleting" msprop:Generator_RowChangingName="tbl_dimensiRowChanging" msprop:Generator_RowEvHandlerName="tbl_dimensiRowChangeEventHandler" msprop:Generator_RowDeletedName="tbl_dimensiRowDeleted" msprop:Generator_RowClassName="tbl_dimensiRow" msprop:Generator_UserTableName="tbl_dimensi" msprop:Generator_RowEvArgName="tbl_dimensiRowChangeEvent">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ID" msdata:AutoIncrement="true" msdata:AutoIncrementSeed="-1" msdata:AutoIncrementStep="-1" msprop:Generator_ColumnVarNameInTable="columnID" msprop:Generator_ColumnPropNameInRow="ID" msprop:Generator_ColumnPropNameInTable="IDColumn" msprop:Generator_UserColumnName="ID" type="xs:int" />
+              <xs:element name="dimensi" msprop:Generator_ColumnVarNameInTable="columndimensi" msprop:Generator_ColumnPropNameInRow="dimensi" msprop:Generator_ColumnPropNameInTable="dimensiColumn" msprop:Generator_UserColumnName="dimensi" minOccurs="0">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="255" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="tbl_kata_kunci" msprop:Generator_TableClassName="tbl_kata_kunciDataTable" msprop:Generator_TableVarName="tabletbl_kata_kunci" msprop:Generator_RowChangedName="tbl_kata_kunciRowChanged" msprop:Generator_TablePropName="tbl_kata_kunci" msprop:Generator_RowDeletingName="tbl_kata_kunciRowDeleting" msprop:Generator_RowChangingName="tbl_kata_kunciRowChanging" msprop:Generator_RowEvHandlerName="tbl_kata_kunciRowChangeEventHandler" msprop:Generator_RowDeletedName="tbl_kata_kunciRowDeleted" msprop:Generator_RowClassName="tbl_kata_kunciRow" msprop:Generator_UserTableName="tbl_kata_kunci" msprop:Generator_RowEvArgName="tbl_kata_kunciRowChangeEvent">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="id_kata_kunci" msdata:AutoIncrement="true" msdata:AutoIncrementSeed="-1" msdata:AutoIncrementStep="-1" msprop:Generator_ColumnVarNameInTable="columnid_kata_kunci" msprop:Generator_ColumnPropNameInRow="id_kata_kunci" msprop:Generator_ColumnPropNameInTable="id_kata_kunciColumn" msprop:Generator_UserColumnName="id_kata_kunci" type="xs:int" />
+              <xs:element name="kata_kunci" msprop:Generator_ColumnVarNameInTable="columnkata_kunci" msprop:Generator_ColumnPropNameInRow="kata_kunci" msprop:Generator_ColumnPropNameInTable="kata_kunciColumn" msprop:Generator_UserColumnName="kata_kunci" minOccurs="0">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="255" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element name="id_dimensi" msprop:Generator_ColumnVarNameInTable="columnid_dimensi" msprop:Generator_ColumnPropNameInRow="id_dimensi" msprop:Generator_ColumnPropNameInTable="id_dimensiColumn" msprop:Generator_UserColumnName="id_dimensi" type="xs:int" minOccurs="0" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="tbl_komentar" msprop:Generator_TableClassName="tbl_komentarDataTable" msprop:Generator_TableVarName="tabletbl_komentar" msprop:Generator_RowChangedName="tbl_komentarRowChanged" msprop:Generator_TablePropName="tbl_komentar" msprop:Generator_RowDeletingName="tbl_komentarRowDeleting" msprop:Generator_RowChangingName="tbl_komentarRowChanging" msprop:Generator_RowEvHandlerName="tbl_komentarRowChangeEventHandler" msprop:Generator_RowDeletedName="tbl_komentarRowDeleted" msprop:Generator_RowClassName="tbl_komentarRow" msprop:Generator_UserTableName="tbl_komentar" msprop:Generator_RowEvArgName="tbl_komentarRowChangeEvent">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="komentar" msprop:Generator_ColumnVarNameInTable="columnkomentar" msprop:Generator_ColumnPropNameInRow="komentar" msprop:Generator_ColumnPropNameInTable="komentarColumn" msprop:Generator_UserColumnName="komentar" minOccurs="0">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="255" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:choice>
+    </xs:complexType>
+    <xs:unique name="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//mstns:tbl_dimensi" />
+      <xs:field xpath="mstns:ID" />
+    </xs:unique>
+    <xs:unique name="tbl_kata_kunci_Constraint1" msdata:ConstraintName="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//mstns:tbl_kata_kunci" />
+      <xs:field xpath="mstns:id_kata_kunci" />
+    </xs:unique>
+  </xs:element>
+</xs:schema>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         ÿÿÿÿ          dMicrosoft.VisualStudio.CommonIDE, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a   8Microsoft.VisualStudio.Build.ComInteropWrapper.RarInputs   allowedAssemblyExtensionsappConfigFilecandidateAssemblyFilesfullFrameworkAssemblyTablesfullFrameworkFoldersfullTargetFrameworkSubsetNames$ignoreDefaultInstalledAssemblyTables*ignoreDefaultInstalledAssemblySubsetTablesinstalledAssemblyTablesinstalledAssemblySubsetTables latestTargetFrameworkDirectoriespdtarSearchPathsgdtarSearchPathsprofileNameregistrySearchPath	stateFiletargetFrameworkDirectoriestargetFrameworkMoniker!targetFrameworkMonikerDisplayNametargetFrameworkVersiontargetProcessorArchitecturetargetedRuntimeVersiontargetFrameworkSubsetsuseReferencesFromProjectreferencePaths   ŸSystem.Collections.Generic.List`1[[System.Collections.Generic.KeyValuePair`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.Collections.Generic.List`1[[System.Collections.Generic.KeyValuePair`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]ŸSystem.Collections.Generic.List`1[[System.Collections.Generic.KeyValuePair`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.Collections.Generic.List`1[[System.Collections.Generic.KeyValuePair`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]ŸSystem.Collections.Generic.List`1[[System.Collections.Generic.KeyValuePair`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.Collections.Generic.List`1[[System.Collections.Generic.KeyValuePair`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]   	   
+	   	   	   	     	   		   	
+   	   
+       B{Registry:Software\Microsoft\.NETFramework,v4.5,AssemblyFoldersEx}   uD:\skripsi dika\AplikasiPembandingHarga\AplikasiPembandingHarga\obj\Release\DesignTimeResolveAssemblyReferences.cache	      .NETFramework,Version=v4.5   .NET Framework 4.5   v4.5   msil   
+v4.0.30319	    
+         .winmd   .dll   .exe         gD:\skripsi dika\AplikasiPembandingHarga\AplikasiPembandingHarga\Properties\DataSources\Form2.datasource   \D:\skripsi dika\AplikasiPembandingHarga\AplikasiPembandingHarga\Properties\Settings.settings   JD:\skripsi dika\AplikasiPembandingHarga\AplikasiPembandingHarga\App.config   gC:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\Microsoft.CSharp.dll   lC:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\Microsoft.VisualBasic.dll   _C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\mscorlib.dll   bC:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll    tC:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Data.DataSetExtensions.dll!   bC:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Data.dll"   hC:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Deployment.dll#   ]C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll$   eC:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Drawing.dll%   kC:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll&   aC:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xml.dll'   fC:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xml.Linq.dll   ŸSystem.Collections.Generic.List`1[[System.Collections.Generic.KeyValuePair`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.Collections.Generic.List`1[[System.Collections.Generic.KeyValuePair`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]   _items_size_version  ¯System.Collections.Generic.KeyValuePair`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.Collections.Generic.List`1[[System.Collections.Generic.KeyValuePair`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]][]	(                 )   SC:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\      *   Full      	(           	      	(           
+             ,   {CandidateAssemblyFiles}-   {HintPathFromItem}.   {TargetFrameworkDirectory}/   B{Registry:Software\Microsoft\.NETFramework,v4.5,AssemblyFoldersEx}0   {RawFileName}1   LD:\skripsi dika\AplikasiPembandingHarga\AplikasiPembandingHarga\bin\Release\      2   SC:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\3   [C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\Facades\       (           ­System.Collections.Generic.KeyValuePair`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.Collections.Generic.List`1[[System.Collections.Generic.KeyValuePair`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ĞÏà¡±á                >  şÿ	               µ          ¸      şÿÿÿ    ³   ´   ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿì¥Á ; !  ğ¿             æX   bjbj%×%×                  	 4~  G½ídG½íd(      9                   ?   ÿÿ         ÿÿ         ÿÿ                 ·     
+      
+  U      U      ¥      ¥      ¥             ÿÿÿÿ    ¹      ¹      ¹  8   ñ  T   E  ,  ¹      'u  ®  q      q      q      q      ‡      L*      L*      L*      jt     lt      lt      lt      lt      lt      lt  $   Õw  ¶  ‹z  ¶   t  Q                   ¥      L*                      *      *  @   L*      L*      t              U      U      q              ‡  …  át     <      <      <      L*  
+  U      q      U  8   q     jt              <                                                      L*      jt              <      <  j  fm  ¼                                                                       r      q      ÿÿÿÿ    °>HsöÓ        ÿÿÿÿ    V9  v   "o  2           Vt     ÷t  0   'u      To  J  A{      Ì9  `  A{  d   r                                                                      r  0   A{              ¥      Îr  ˆ  L*      L*      <      L*      L*                                      L*      L*      L*      t      t                                      ,;  r                                  L*      L*      L*      'u      L*      L*      L*      L*              ÿÿÿÿ    ÿÿÿÿ    ÿÿÿÿ            ÿÿÿÿ    ÿÿÿÿ    ÿÿÿÿ    ÿÿÿÿ    ÿÿÿÿ    ÿÿÿÿ    ÿÿÿÿ    ÿÿÿÿ    ÿÿÿÿ    ÿÿÿÿ    ÿÿÿÿ    ÿÿÿÿ    ÿÿÿÿ    ÿÿÿÿ    A{      L*      L*      L*      L*      L*      L*                                                              L*      L*      L*      
+      :     !                                                                                                                                                                                                                                                                                                                                                                                                                                      KuesionerPembangunan Sistem Informasi Restoran (SIRESTO) Berbasis Mobile dan Desktop.Kepada Responden yang saya hormati,      Kuesioner ini merupakan salah satu bagian dari riset yang sedang saya dalam rangka untuk memenuhi tugas akhir Strata Satu di Fakultas Teknologi Industri Universitas Atma Jaya Yogyakarta. Penelitian ini mengenai peningkatan efisiensi dalam hal pengurangan beban kerja dan kesalahan karyawan  restoran. Setelah menggunakan Sistem Informasi Restoran (SIRESTO). Partisipasi serta peran Bapak/Ibu/Saudara dalam pengisian kuesioner ini sangat dibutuhkan bagi penelitian ini.  Terimakasih atas kesediaan Bapak/Ibu/Saudara telah meluangkan waktu Bapak/Ibu/Saudara  yang sangat berharga untuk mengisi kuesioner ini. Hormat saya, Antonius AgapeTata Cara Pengisian Kuesioner:Untuk pertanyaan dengan model mengisi kolom, silakan tulis jawaban anda pada kolom kosong disamping pertanyaan.1.Siapa Presiden Pertama R.I?Soekarno2.Apakah 1 hari adalah 24 jam?                               ¡%  Y a  ¡%  T i d a k   U n t u k   p e r t a n y a a n   d e n g a n   m o d e l   p i l i h a n   g a n d a ,   s i l a k a n   c e n t a n g   ( v )   a t a u   s i l a n g   ( x )   s a t u   j a w a b a n .     U n t u k   p e r t a n y a a n   d e n g a n   m o d e l   s k a l a ,   s i l a k a n   i s i   d e n g a n   a n g k a   1      5 .    3 . 6  A p a k a h   a n d a   s e t u j u   p e m b a n g u n a n   f l y   o v e r   J a n t i ?   4  B e r i k a n   r e s p o n   1      5   Angka 1 berarti Tidak SetujuAngka 2 berarti Kurang SetujuAngka 3 berarti Tidak TahuAngka 4 berarti SetujuAngka 5 berarti Sangat SetujuA. DATA RESTORAN1Nama Rumah Makan 2Alamat Rumah Makan 3Nama Responden4Apakah role pekerjaan Anda di Restoran ini?5Apakah ada aktivitas pencatatan dalam pekerjaan anda?                                                                                                                                                                                   ¡%  Y a   ¡%  T i d a k    6  P e n c a t a t a n   y a n g   a n d a   l a k u k a n   m e n g g u n a k a n   a l a t   b a n t u     6  A p a k a h   a d a   a k t i v i t a s   p e n g h i t u n g a n   d a l a m   p e k e r j a a n   a n d a ?  ¡%  Y a   ¡%  T i d a k    7  S e b u t k a n   p e r a l a t a n   y a n g   d i g u n a k a n   d a l a m   m e l a k u k a n   p e r h i t u n g a n    ¡%  M a n u a l   ( t u l i s   t a n g a n )  ¡%  K a l k u l a t o r   ¡%  K o m p u t e r  ¡%  . . & & & & &   8  J e l a s k a n   a k t i v i t a s   p e n c a t a t a n   d a n   a t a u   p e r h i t u n g a n   y a n g   a n d a   l a k u k a n !     9  B e r a p a k a h   a k t i v i t a s   y a n g   a n d a   l a k u k a n   u n t u k   m e l a k u k a n   s e b u a h   t r a n s a k s i   s e s u a i   r o l e   a n d a ?  ¡%  0  ¡%2   s e m u a  ¡%  4   - 5  ¡%  L e b i h   D a r i   5   1 0  A p a k a h   p e r n a h   t e r j a d i     k e s a l a h a n   p e n c a t a t a n /   p e r h i t u n g a n   p e s a n a n ?    ¡%  Y a   ¡%  T i d a k    1 1  J i k a   p e r n a h   s e b u t k a n   k e s a l a h a n   p e n c a t a t a n /   p e r h i t u n g a n   y a n g   t e r j a d i !       1 1  J i k a   p e r n a h   m e l a k u k a n   k e s a l a h a n ,   b e r a p a   k a l i   k i r a - k i r a   a n d a   m e l a k u k a n   k e s a l a h a n   p e n c a t a t a n   a t a u   p e r h i t u n g a n   d a l a m   s e k a l i   a k t i v i t a    
+    W  Y  Æ  Ê  Ë  O	  X	  ë	  
+  
+  :
+  D
+  J
+  Z
+  x
+  
+  ‰
+  Š
+  ¡
+  ª
+  ²
+  ³
+  ´
+  è
+  ï
+  ó
+  ÷
+        &  '  –  —  ˜  ™  š  µ  ¶  ¾  À  Á  Ã  ïãÚãÏÇÏ¿Ï¿Ï¿Ï¿Ï¿Ï´¬´Ï´¬´¬Ï¤¬Ï¬˜¤¬¤¬¤‹‹‹‹y             hb<` CJ ^J  hIE¬ CJ ^J aJ  hs hIE¬ CJ ^J aJ  hÕ“ h<cA 5CJ ^J h<cA CJ ^J  hs CJ ^J  h<cA hs CJ ^J  h!t CJ ^J  hÊê CJ ^J  h<cA h<cA CJ ^J  h½ 3 5CJ  ^J h<cA h<cA 5CJ  ^J h<cA h<cA 5CJ  OJ QJ ^J  -   
+  ;  X  Y  Z  ~  €  [
+  ]
+  æ
+  è
+  õ
+  ÷
+        '  ê            Õ            Õ            ê            Ã            Ã            Ã            ¶            ¡            ¶            Ã            Ã            Ã            Ã            Ã            Ã            Ã                                            $„Ğ„0ıdğ  ¤  ^„Ğ`„0ıa$gd½ 3    $dğ  ¤  a$gdÕ“    „Ğ„0ıdğ  ¤  ^„Ğ`„0ıgdIhI    $„Ğ„0ıdğ  ¤  ^„Ğ`„0ıa$gd½ 3    $„Ğ„0ıdğ  ¤  ^„Ğ`„0ıa$gdIhI  '  —  š  ¶  ¿  ò            Ó            Ó            Ó                                                                                                                                                                                                                                                                                                                                                                            „Ğ„0ıdğ  ¤  $„m„Îÿ& #$/„´ If   ^„Ğ`„0ıgdIE¬   
+& F dğ  ¤  gds  ¿  À  Á  Ä  X            J            +                                             „Ğ„0ıdğ  ¤  $„øÿ„&`#$/„´ If   ^„Ğ`„0ıgdb<`    „Ğdğ  ¤  ^„Ğgdb<`  ¦  kd    $$If   –l Ö            ÖF ”ÿï ˆ                 ø	                 Û                
+t   6 ”m”Îÿ”´ Ö0   ÿ     ÿ     ÿ     ÿ     ÿ     ÿ  ö[ö  Ö   ÿ   ÿ   ÿÖ   ÿ   ÿ   ÿÖ   ÿ   ÿ   ÿÖ   ÿ   ÿ   ÿ”´ 4Ö   4Ö 
+l aö  pÖ   ÿ   ÿ     ÿ   ÿ     ÿ   ÿ  ytIE¬  Ã  Ä  à    ¼  Ú  Ü  Ş  8  j  n  r  –  °  À  Ì  Î  Ò  Ô     ‹  Œ        ‘  ™  ¡  ¢  £  ·  óéóáÙÎáÃÙé¶«¢”¢«Œ«¶ÙÃ„áwoje]„R          h~Eë h&H@ CJ ^J  ht.Ê h7rÅ 5	h½ 3 5	h7rÅ 5h½ 3 CJ ^J  h<cA 5CJ  OJ QJ ^J h<cA CJ ^J  hIE¬ CJ aJ  hIE¬ hIE¬ 56CJ aJ  hIE¬ 5CJ aJ hb<` hIE¬ CJ aJ  hb<` hIE¬ CJ ^J aJ  hb<` hb<` CJ ^J  hs hb<` CJ ^J  hb<` CJ ^J  hs CJ ^J  hIE¬ CJ ^J aJ  hb<` hb<` CJ ^J aJ Ä  á  
+    à            Á            Á                                                                                                                                                                                                                                                                                                                                                         „Ğ„0ıdğ  ¤  $„øÿ„&`#$/„´ If   ^„Ğ`„0ıgdb<`   „" „Şÿdğ  ¤  $„øÿ„&`#$/„´ If   ^„" `„Şÿgdb<`      Ü  Ş  @            3            )                                        	  dğ  ¤  gdb<`   
+& F dğ  ¤  gds  ¾  kdÂ   $$If   –l Ö            Ö\ ”ÿ7¡Øï £                 j	                 7            ÿÿÿÿ     ÿÿÿÿ        
+t   6`”øÿ””´ Ö0   ÿ     ÿ     ÿ     ÿ     ÿ     ÿ  ö[ö  Ö   ÿ   ÿ   ÿ   ÿÖ   ÿ   ÿ   ÿÿÿÿÿÖ   ÿ   ÿ   ÿ   ÿÖ   ÿ   ÿÿÿÿÿ   ÿ”´ 4Ö   4Ö 
+l aö  pÖ(   ÿ   ÿ     ÿ   ÿ     ÿ   ÿ     ÿ   ÿ  ytIE¬  Ş  j  r  Ô  ş  ò            Ó            Ó            ±                                                                                                                                                                                                                                                                                                      "  $„Ğ„0ıdğ  ¤  $„øÿ„R &`#$/„´ If   ^„Ğ`„0ıa$gdIE¬   „Ğ„0ıdğ  ¤  $„øÿ„R &`#$/„´ If   ^„Ğ`„0ıgdIE¬   
+& F dğ  ¤  gdIE¬  ş       ;  V  m  ‹  Œ      p            b            b            b            b            b            b            P            P                  „Ğ„0ıdğ  ¤  ^„Ğ`„0ıgdIhI    „Ğdğ  ¤  ^„Ğgdb<`    kd¸  $$If   –l Ö            Ö0 ”ÿï ˆ                 Ó              
+t   6`”øÿ”R ”´ Ö0   ÿ     ÿ     ÿ     ÿ     ÿ     ÿ  ö[ö  Ö   ÿ   ÿÖ   ÿ   ÿÖ   ÿ   ÿÖ   ÿ   ÿ”´ 4Ö   4Ö 
+l aö  pÖ   ÿ   ÿ     ÿ   ÿ  ytIE¬  	      ‘  ¢  £  ¥  ·  ¸  õ            õ            õ            ã            Ñ            »            »            »                                                                                                                                                                                                                                                        „Ğ„0ıdğ  ¤  $If   ^„Ğ`„0ıgd~Eë    „Ğ„0ıdğ  ¤  ^„Ğ`„0ıgdIhI    „Ğ„0ıdğ  ¤  ^„Ğ`„0ıgd7rÅ  	  dğ  ¤  gd½ 3  ·  ¸  ¹  Ğ  Ñ  Ò  ã  ä  å  æ  ç  î  ò          L                  Œ    ’  ”  –      
+  óèİóèİóèÕÊÂ¶ÂÊÕ«ÂÊ””«Õ‡|titi\                    hÊê h;î CJ ^J aJ  h~Eë h;î CJ ^J  h;î CJ ^J  h~Eë hµ8è CJ ^J  hÊê hµ8è CJ ^J aJ  hµ8è CJ ^J aJ  hÊê hÊê CJ ^J aJ  h~Eë hÊê CJ ^J  h¯X¸ h¯X¸ 6CJ ^J h¯X¸ CJ ^J  h~Eë h¯X¸ CJ ^J  hµ8è CJ ^J  h~Eë h&H@ CJ ^J  h~Eë h·¥ CJ ^J  h~Eë h&H@ CJ  ^J aJ   ¸  ¹  »  Î  Ğ  Ñ  b            L            6            L            L                                 „Ğ„0ıdğ  ¤  $If   ^„Ğ`„0ıgdUl·   „Ğ„0ıdğ  ¤  $If   ^„Ğ`„0ıgd~Eë   kdp  $$If   –l Ö            ÖF ”ÿ7/% £                 ø	                 ë                
+t   Ö0   ÿ     ÿ     ÿ     ÿ     ÿ     ÿ  ö†%ö  Ö   ÿ   ÿ   ÿÖ   ÿ   ÿ   ÿÖ   ÿ   ÿ   ÿÖ   ÿ   ÿ   ÿ4Ö   4Ö 
+l aö  pÖ   ÿ   ÿ     ÿ   ÿ     ÿ   ÿ  yt~Eë  Ñ  Ò  Ô  ã  ä  `            J            J            J                                                                                          „Ğ„0ıdğ  ¤  $If   ^„Ğ`„0ıgd~Eë Ÿ  kd  $$If   –l Ö            ”ØÖF ”ÿ7/% £                 ø	                 ë                
+t   Ö0   ÿ     ÿ     ÿ     ÿ     ÿ     ÿ  ö†%ö  Ö   ÿ   ÿ   ÿÖ   ÿ   ÿ   ÿÖ   ÿ   ÿ   ÿÖ   ÿ   ÿ   ÿ4Ö   4Ö 
+l aö  pÖ   ÿ   ÿ     ÿ   ÿ     ÿ   ÿ  ytµ8è  ä  å  ç      b            L            6            +                            dğ  ¤  $If     „" „Şÿdğ  ¤  $If   ^„" `„Şÿgd¯X¸   „Ğ„0ıdğ  ¤  $If   ^„Ğ`„0ıgdIE¬   kdÒ  $$If   –l Ö            ÖF ”ÿ7/% £                 ø	                 ë              
+t   Ö0   ÿ     ÿ     ÿ     ÿ     ÿ     ÿ  ö†%ö  Ö   ÿ   ÿ   ÿÖ   ÿ   ÿ   ÿÖ   ÿ   ÿ   ÿÖ   ÿ   ÿ   ÿ4Ö   4Ö 
+l aö  pÖ   ÿ   ÿ     ÿ   ÿ     ÿ   ÿ  yt~Eë        M  
+    `            J            4            J            J                             „" „Şÿdğ  ¤  $If   ^„" `„Şÿgd¯X¸   „Ğ„0ıdğ  ¤  $If   ^„Ğ`„0ıgdIE¬ Ÿ  kd  $$If   –l Ö            ”äÖF ”ÿ7/% £         ø	         ëÿÿÿÿ    ÿÿÿÿ    
+t   Ö0   ÿ     ÿ     ÿ     ÿ     ÿ     ÿ  ö†%ö  Ö   ÿ   ÿÿÿÿÿÖ   ÿ   ÿ   ÿÖ   ÿ   ÿÿÿÿÿÖ   ÿ   ÿ   ÿ4Ö   4Ö 
+l aö  pÖ   ÿ   ÿ     ÿ   ÿ     ÿ   ÿ  ytµ8è           $  é            é            4            é                                            µ  kd^  $$If   –l Ö            Ö\ ”ÿ7/ï% £         ø	         À      ÿÿÿÿ +  ÿÿÿÿ    
+t   Ö0   ÿ     ÿ     ÿ     ÿ     ÿ     ÿ  ö†%ö  Ö   ÿ   ÿ   ÿ   ÿÖ   ÿ   ÿ   ÿÿÿÿÿÖ   ÿ   ÿ   ÿ   ÿÖ   ÿ   ÿÿÿÿÿ   ÿ4Ö   4Ö 
+l aö  pÖ(   ÿ   ÿ     ÿ   ÿ     ÿ   ÿ     ÿ   ÿ  yt	]·   „Ğ„0ıdğ  ¤  $If   ^„Ğ`„0ıgdIE¬  $  Œ      é            Ó            Ó                                                                                                                                                                                                                                                                                                                                                                                             „Ğ„0ıdğ  ¤  $If   ^„Ğ`„0ıgdIE¬   „" „Şÿdğ  ¤  $If   ^„" `„Şÿgd¯X¸    ’  –    J            4                               „" „Şÿdğ  ¤  $If   ^„" `„Şÿgd;î   „Ğ„0ıdğ  ¤  $If   ^„Ğ`„0ıgd;î µ  kdk  $$If   –l Ö            Ö\ ”ÿ7/ï% £         ø	         À      ÿÿÿÿ +  ÿÿÿÿ    
+t   Ö0   ÿ     ÿ     ÿ     ÿ     ÿ     ÿ  ö†%ö  Ö   ÿ   ÿ   ÿ   ÿÖ   ÿ   ÿ   ÿÿÿÿÿÖ   ÿ   ÿ   ÿ   ÿÖ   ÿ   ÿÿÿÿÿ   ÿ4Ö   4Ö 
+l aö  pÖ(   ÿ   ÿ     ÿ   ÿ     ÿ   ÿ     ÿ   ÿ  yt	]·  
+         $  &  ¨  Ü  ğ    
+           °  ´  ¶  ¸  º  V  `  j  l  n  p  r  t  v  „  †  ˆ  Š  ’  ”  –  ˜  °  ²  ´  ¸  º  @  D  H  P  öéöéŞÖÉ¿É¿É¿É´ÖÉ´Ö´Ö«Ö “†¿†“|†“†¿†“†¿†´tŞtéöé   h;î CJ ^J  hrz– CJ ^J aJ  h~Eë hµ8è CJ ^J aJ  h~Eë hµ8è CJ$ ^J aJ$  h¯X¸ hµ8è CJ ^J  hµ8è 6CJ ^J h~Eë hµ8è CJ ^J  hµ8è CJ ^J aJ  hÊê hµ8è CJ ^J aJ  hµ8è CJ ^J  h~Eë h;î CJ ^J  hÊê h;î CJ ^J aJ  h;î CJ ^J aJ -      "  $  &  é            é            é            é            4                           µ  kdx  $$If   –l Ö            Ö\ ”ÿ7/ï% £         ø	         À      ÿÿÿÿ +  ÿÿÿÿ    
+t   Ö0   ÿ     ÿ     ÿ     ÿ     ÿ     ÿ  ö†%ö  Ö   ÿ   ÿ   ÿ   ÿÖ   ÿ   ÿ   ÿÿÿÿÿÖ   ÿ   ÿ   ÿ   ÿÖ   ÿ   ÿÿÿÿÿ   ÿ4Ö   4Ö 
+l aö  pÖ(   ÿ   ÿ     ÿ   ÿ     ÿ   ÿ     ÿ   ÿ  yt	]·   „Ğ„0ıdğ  ¤  $If   ^„Ğ`„0ıgd;î  spòñ "   È SegSs ±  Ì ExtendedRegisters    ²          Ì_CONTEXTñ.   €               __GENERIC_BINDING_INFOóòñ
+ ´  
+   V  ´    pAutoHandleòñ ´    pPrimitiveHandleñ µ    pGenericBindingInfoòñ*   ¶   _MIDL_STUB_DESC::__unnamedóòñ
+ Â  
+  
+ ¸  
+   2   €               _GENERIC_BINDING_ROUTINE_PAIR
+ º   òñ
+ »  
+   
+ ~  
+  
+ ½  
+   .   €               _XMIT_ROUTINE_QUINTUPLEòñ
+ ¿   òñ
+ À  
+   *   €               _MALLOC_FREE_STRUCTòñ
+ Â  
+   *   €               _COMM_FAULT_OFFSETSòñ
+ Ä   òñ
+ Å  
+   6   €               _USER_MARSHAL_ROUTINE_QUADRUPLEòñ
+ Ç   òñ
+ È  
+   
+     RpcInterfaceInformationòñ Œ   pfnAllocateòñ á   pfnFreeòñ ·   IMPLICIT_HANDLE_INFOñ ¹   apfnNdrRundownRoutinesóòñ ¼   aGenericBindingRoutinePairsòñ ¾   apfnExprEvalñ Á   aXmitQuintupleóòñ     pFormatTypesñ t   $ fCheckBoundsñ "   ( Versionòñ Ã  , pMallocFreeStruct    0 MIDLVersionòñ Æ  4 CommFaultOffsetsñ É  8 aUserMarshalQuadruple    < 	Reserved1    @ 	Reserved2    D 	Reserved3    H 	Reserved4    L 	Reserved5&    Ê          P _MIDL_STUB_DESCòñ        P  ñÖ  "     ControlWordòñ "    
+StatusWordóòñ "    TagWordòñ "    ErrorOffsetòñ "    ErrorSelector "    
+DataOffsetóòñ "    DataSelectorñ Ì   RegisterAreañ "   l Cr0NpxStateòñ* 	   Í          p _FLOATING_SAVE_AREAòñ2  !     MajorVersionñ !    MinorVersionñ"    Ï           _RPC_VERSIONñJ  ´    	XlatTable     
+StateTableóòñ "    NumberOfEntriesòñ6   Ñ            _FULL_PTR_XLAT_TABLES::__unnamedñ2   €               _FULL_PTR_TO_REFID_ELEMENTóòñ
+ Ó  
+   
+ Ô  
+   F  Õ    	XlatTable "    NumberOfBucketsòñ "    HashMaskñ6   Ö            _FULL_PTR_XLAT_TABLES::__unnamedñb  Ò    RefIdToPointeróòñ ×   PointerToRefIdóòñ "    	NextRefId    XlatSideñ*    Ø            _FULL_PTR_XLAT_TABLESJ      pObjñ u    Sizeñ ®   pfnBindòñ È   	pfnUnbind.    Ú           __GENERIC_BINDING_INFOóòñ&   €               tagRPCOLEMESSAGEñ
+ Ü  
+       İ  z  
+ ›  
+   	   ›  ß    Ş          İ  "   	   ›  ß    á      
+    İ   	   ›  ß    ã          "  ´   	   ›  ß    å       	   ›  ß           
+ ›   òñ
+ è  *   
+    é   	   ›  ß    ê       	   ›  ß              ë    ì  
+ ›  *    	î  ›  ß    ê      ¶   *    òñ à     	GetBufferòñ â     SendReceive ä     
+FreeBufferñ æ     
+GetDestCtxñ ç     IsConnected í  IRpcChannelBufferòñï  	operator=òñ
+ 
+  UUUUòñ& 	  ğ      ñ   IRpcChannelBufferr      pfnTranslateToXmitóòñ    pfnTranslateFromXmitñ    pfnFreeXmitòñ    pfnFreeInstòñ.    ó           _XMIT_ROUTINE_QUINTUPLEòñ
+ #  
+    "      <  ñª  "     ExceptionCode "    ExceptionFlagsóòñ ©   ExceptionRecordòñ    ExceptionAddressñ "    NumberParametersñ ö   ExceptionInformationñ&    ÷          P _EXCEPTION_RECORD        ñš      	reserved1 "    dataRepresentationóòñ    Bufferóòñ "    cbBufferñ "    iMethodòñ ù   	reserved2 "   ( rpcFlagsñ&    ú          , tagRPCOLEMESSAGEñ.  Œ    pfnAllocateòñ á   pfnFreeòñ*    ü           _MALLOC_FREE_STRUCTòñ¢       	Dimension "   BufferConformanceMark "   BufferVarianceMarkóòñ "   MaxCountArray "   OffsetArrayòñ "   ActualCountArrayñ"    ş           
+ARRAY_INFOóòñ^      pfnBufferSize #   pfnMarshallòñ #   pfnUnmarshall à   pfnFreeòñ6                _USER_MARSHAL_ROUTINE_QUADRUPLEòñ*  ®    pfnBindòñ È   	pfnUnbind2               _GENERIC_BINDING_ROUTINE_PAIR2  X    
+SyntaxGUIDóòñ ¼   SyntaxVersion.               _RPC_SYNT€™€€©€€ €‚Åƒ!ƒ%€€
+€€  €·z\V4à‰°?_Õ
+:       IMQUY]aeim@DH€¹AEuqud $(0
+€€48<L5PT q €‘ €• i  @  D  H €å €é€í  A  E E    u  q  u @     D ‰
+ ‰ ‰‰ H  d d       $ $  ( (    M€M€ M€ €€M€ €  € X €ıX €ı \ €ı\ ` €ı`   L 4 L L  L €  ! P 8 P P  P T < T T  T L5 P5 T5 
+ €€	 €€( ( @( D( H( €¹( €Ñ( €Õ A E ( u( I( q( u( ( d(  ( $( (( ( ( (L(P(T( L( 5( P( T        TWrapNonExceptionThrows      Skripsi Puthut       Copyright Â©  2018  ) $84ffadf4-af57-4cdb-88de-7211698194f1   1.0.0.0  M .NETFramework,Version=v4.6.1 TFrameworkDisplayName.NET Framework 4.6.15 (System.Data.Design.TypedDataSetGenerator4.0.0.0   vs.data.TableAdapter  	       	      	      	      	             	 code      GetTypedDataSetSchema   textMinningDataSet   vs.data.DataSet  @ 3System.Resources.Tools.StronglyTypedResourceBuilder4.0.0.0  Y KMicrosoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator14.0.0.0  €› €•Microsoft.VSDesigner.DataSource.Design.TableAdapterDesigner, Microsoft.VSDesigner, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a  €¢ €œMicrosoft.VSDesigner.DataSource.Design.TableAdapterManagerDesigner, Microsoft.VSDesigner, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a    vs.data.TableAdapterManager  	 Item   GetTypedTableSchema              T OProvider=Microsoft.ACE.OLEDB.12.0;Data Source=|DataDirectory|\textMinning.accdb  €Ë €¢Microsoft.VSDesigner.DataSource.Design.TableAdapterManagerPropertyEditor, Microsoft.VSDesigner, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"System.Drawing.Design.UITypeEditor  ´   ÎÊï¾   ‘   lSystem.Resources.ResourceReader, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089#System.Resources.RuntimeResourceSet           PADPADP´   ´   ÎÊï¾   ‘   lSystem.Resources.ResourceReader, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089#System.Resources.RuntimeResourceSet           PADPADP´       úÌ[         ( 
+ RSDS›°ôù*ã‡E¦¶'‰ˆ–z   D:\Skripsi Puthut\Skripsi Puthut\obj\Debug\Skripsi Puthut.pdb                                                                                                                                                                                                       Ô)         î)                         à)           _CorExeMain mscoree.dll     ÿ%  @                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
